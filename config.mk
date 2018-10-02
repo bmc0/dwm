@@ -26,14 +26,11 @@ INCS = -I${X11INC} -I${FREETYPEINC}
 LIBS = -L${X11LIB} -lX11 ${XINERAMALIBS} ${FREETYPELIBS}
 
 # flags
-CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700L -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
-#CFLAGS   = -g -std=c99 -pedantic -Wall -O0 ${INCS} ${CPPFLAGS}
-CFLAGS   = -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os ${INCS} ${CPPFLAGS}
-LDFLAGS  = ${LIBS}
+LOCAL_CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700L -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
+#LOCAL_CFLAGS   = -g -std=c99 -pedantic -Wall -O0 ${INCS} ${LOCAL_CPPFLAGS}
+LOCAL_CFLAGS   = -std=c99 -pedantic -Wall -Wno-deprecated-declarations -flto -Os ${INCS} ${CFLAGS} ${LOCAL_CPPFLAGS}
+LOCAL_LDFLAGS  = -flto ${LIBS} ${LDFLAGS}
 
 # Solaris
-#CFLAGS = -fast ${INCS} -DVERSION=\"${VERSION}\"
-#LDFLAGS = ${LIBS}
-
-# compiler and linker
-CC = cc
+#LOCAL_CFLAGS = -fast ${INCS} -DVERSION=\"${VERSION}\"
+#LOCAL_LDFLAGS = ${LIBS}
