@@ -52,7 +52,10 @@ void drw_setscheme(Drw *drw, Clr *scm);
 
 /* Drawing functions */
 void drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int invert);
-int drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert);
+#define drw_text(drw, x, y, w, h, lpad, text, invert) drw_text2(drw, x, y, w, h, lpad, text, invert, 1)
+int drw_text2(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert, int full_width);
+int drw_get_colored_text_width(Drw *, int numcolors, const char *text, int lrpad);
+void drw_colored_text(Drw *drw, Clr **scheme, int numcolors, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, char *text);
 
 /* Map functions */
 void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h);
