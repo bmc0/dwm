@@ -236,6 +236,55 @@ drw_setscheme(Drw *drw, Clr *scm)
 		drw->scheme = scm;
 }
 
+int
+drw_get_colored_text_width(Drw *drw, int numcolors, const char *text, int lrpad)
+{
+	int i, w = drw_fontset_getwidth(drw, text) + lrpad;
+	if (w == 0)
+		return 0;
+	unsigned int ew = 0;
+	char cc[] = { '\\', '0', '\0' };
+
+	for (i = 0; i < strlen(text); ++i) {
+		if (text[i] == '\\' && text[i + 1] >= '0' && text[i + 1] < '0' + numcolors) {
+			cc[1] = text[i + 1];
+			drw_font_getexts(drw->fonts, cc, 2, &ew, NULL);
+			w -= ew;
+			++i;
+		}
+	}
+	return w;
+}
+
+void
+drw_colored_text(Drw *drw, Clr **scheme, int numcolors, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, char *text)
+{
+	if (!drw || !drw->fonts || !drw->scheme)
+		return;
+
+	char *buf = text, *ptr = buf;
+	int i, c;
+
+	while (*ptr) {
+		for (i = 0; *ptr; ++i, ++ptr)
+			if (*ptr == '\\' && *(ptr + 1) >= '0' && *(ptr + 1) < '0' + numcolors)
+				break;
+		if (!*ptr)
+			break;
+		c = *(ptr + 1) - '0';
+		*ptr = '\0';
+		if (i) {
+			x = drw_text2(drw, x, y, w, h, lpad, buf, 0, 0);
+			lpad = 0;
+		}
+		*ptr = '\\';
+		drw_setscheme(drw, scheme[c]);
+		ptr += 2;
+		buf = ptr;
+	}
+	drw_text2(drw, x, y, w, h, lpad, buf, 0, 0);
+}
+
 void
 drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int invert)
 {
@@ -249,11 +298,11 @@ drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int
 }
 
 int
-drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert)
+drw_text2(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert, int full_width)
 {
 	char buf[1024];
 	int ty;
-	unsigned int ew;
+	unsigned int ew = 0;
 	XftDraw *d = NULL;
 	Fnt *usedfont, *curfont, *nextfont;
 	size_t i, len;
@@ -376,7 +425,7 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 	if (d)
 		XftDrawDestroy(d);
 
-	return x + (render ? w : 0);
+	return x + (render && full_width ? w : 0);
 }
 
 void
