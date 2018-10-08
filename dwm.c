@@ -56,6 +56,7 @@
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
+#define SAVE_FLOAT(C)           do { C->sfx = C->x; C->sfy = C->y; C->sfw = C->w; C->sfh = C->h; } while (0)
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -88,6 +89,7 @@ struct Client {
 	char name[256];
 	float mina, maxa;
 	int x, y, w, h;
+	int sfx, sfy, sfw, sfh;  /* stored float geometry */
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
@@ -1075,6 +1077,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
 		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
 	c->bw = borderpx;
+	SAVE_FLOAT(c);
 
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -1204,8 +1207,13 @@ movemouse(const Arg *arg)
 			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
 				ny = selmon->wy + selmon->wh - HEIGHT(c);
 			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
-			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
+			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap)) {
+				ocx = x - (x - ocx) * (c->sfw + 2 * c->bw) / WIDTH(c);
+				ocy = y - (y - ocy) * (c->sfh + 2 * c->bw) / HEIGHT(c);
+				c->sfx = nx = ocx + (ev.xmotion.x - x);
+				c->sfy = ny = ocy + (ev.xmotion.y - y);
 				togglefloating(NULL);
+			}
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, nx, ny, c->w, c->h, 1);
 			break;
@@ -1353,8 +1361,10 @@ resizemouse(const Arg *arg)
 			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
 			{
 				if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
-				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
+				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap)) {
+					SAVE_FLOAT(c);  /* we don't want to restore the dimensions in this case */
 					togglefloating(NULL);
+				}
 			}
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, c->x, c->y, nw, nh, 1);
@@ -1743,8 +1753,11 @@ togglefloating(const Arg *arg)
 		return;
 	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
 	if (selmon->sel->isfloating)
-		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
-			selmon->sel->w, selmon->sel->h, 0);
+		/* restore float dimensions */
+		resize(selmon->sel, selmon->sel->sfx, selmon->sel->sfy,
+			selmon->sel->sfw, selmon->sel->sfh, 0);
+	else
+		SAVE_FLOAT(selmon->sel); /* save float dimensions */
 	arrange(selmon);
 }
 
