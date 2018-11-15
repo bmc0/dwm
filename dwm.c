@@ -94,7 +94,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, issticky;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, issticky, wasfocused;
 	Client *next;
 	Client *snext;
 	Monitor *mon;
@@ -819,6 +819,8 @@ void
 focus(Client *c)
 {
 	if (!c || !ISVISIBLE(c))
+		for (c = selmon->stack; c && !(ISVISIBLE(c) && (!c->issticky || (c->issticky && c->wasfocused))); c = c->snext);
+	if (!c)
 		for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
 	if (selmon->sel && selmon->sel != c)
 		unfocus(selmon->sel, 0);
@@ -1513,6 +1515,7 @@ setfocus(Client *c)
 			XA_WINDOW, 32, PropModeReplace,
 			(unsigned char *) &(c->win), 1);
 	}
+	c->wasfocused = 1;
 	sendevent(c, wmatom[WMTakeFocus]);
 }
 
@@ -1841,6 +1844,7 @@ unfocus(Client *c, int setfocus)
 {
 	if (!c)
 		return;
+	c->wasfocused = 0;
 	grabbuttons(c, 0);
 	XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
 	if (setfocus) {
